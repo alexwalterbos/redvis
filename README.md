@@ -14,7 +14,7 @@ This visualization is intended to show characteristics of the userbase and subre
 
 ## Tools
 We intend to use the [vis.js Graph visualization tool](http://visjs.org/docs/graph.html).
-This library provides an easy way of setting up a Node graph to display the relations we want to visualize.
+This library provides an easy way of setting up a node graph to display the relations we want to visualize.
 
 ### Languages
 Reddit provides an [API](https://github.com/reddit/reddit/wiki/API) and a [Python interface](https://github.com/reddit/reddit/blob/master/r2/r2/controllers/api.py) for it.
