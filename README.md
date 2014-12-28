@@ -5,9 +5,9 @@ A between-subreddit activity visualization tool.
 ## Project goal
 The goal of this project is to visualize the relationship between subreddits on the online forum www.reddit.com.
 We will focus on relationships between subreddits.
-Several types of relations could be distinguished:
+Several types of relations can be distinguished:
 * User activity: A user that is active in two subreddits defines a relationship between these subreddits.
-* X-Posting: Content is posted in multiple subreddits (same question, same url)
+* X-Posting: Content is posted in multiple subreddits (same question, same url).
 * Referral in comments: "Shout out to /r/thisothersub".
 
 This visualization is intended to show characteristics of the userbase and subreddits, by showing related interests (based on the subreddits), and perhaps size of (overlapping) user communities in a later stage.
@@ -25,4 +25,5 @@ For the website, we will, predictably, use HTML, CSS and JavaScript.
 ## Deliverable
 The deliverable for this project will be the graphing tool.
 It will be provided via a web interface.
-It should be interactive; the user should be able to zoom in on interactions, selecting and focussing on subreddits and their direct relations.
+It should be interactive; the user should be able to zoom in on relations, selecting and focussing on subreddits.
+The user must also be able to search a subreddit (by name, and if available) and select it as the root node for the graph.
