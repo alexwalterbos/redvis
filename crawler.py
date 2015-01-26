@@ -1,103 +1,110 @@
 #!/usr/bin/env python
-import Queue
-import threading
-import time
 import signal
-import sys
 import json
 import praw 
-from praw.handlers import MultiProcessHandler
+import threading 
+import os.path
+import Queue
+from functools import partial
+from multiprocessing import Process
+from praw.handlers import MultiprocessHandler
 
-should_stop = [False]
-queue = Queue.Queue()
-post_results = {}
+#helper class for unique 
+class SetQueue(Queue.Queue):
 
-class PostGrabber(threading.Thread):
-	def __init__(self, queue, user_results):
-		threading.Thread.__init__(self)
+    def _init(self, maxsize):
+        self.maxsize = maxsize
+        self.queue = set()
 
-		self.queue = queue
-		self.post_results = post_results
-		self.reddit = create_agent()		
+    def _put(self, item):
+        self.queue.add(item)
 
-	def run(self):
-		global should_stop
-		while True and not should_stop[0]:
-			#grabs host from queue
-			post = self.queue.get()
-			
-			author = post.author.user_name
+    def _get(self):
+        return self.queue.pop()
 
-			if author in self.post_results:
-				update_sub_post(author, post)
-			else
-				grab_user_posts(author)
-
-			#signals to queue job is done
-			self.queue.task_done()
-
-	def update_sub_post(author, post):
-		user_posts = self.post_results[author]
-		sub_post_count = user_posts.get(post.subreddit, 0)
-		user_posts[post.subreddit] = sub_post_count
-
-	def grab_user_posts(user):
-		#grab stuff
-		
-class NewWatcher(threading.Thread):
-	def __init__(self, queue):
-		threading.Thread.__init__(self)
-		self.queue = queue
-		self.reddit = create_agent()
-
-	def run(self):
-		global should_stop
-		while True and not should_stop[0]:
-			#grab new posts
-
-			
-
-#not thread-safe. no jobs should be running when calling this
-def write_results:
-	global post_results
-	f.open('results.json', 'w')
-	f.write(json.dumps(post_results))
-	f.close()
-
-def finalize(signal, frame):
-	global should_stop
-	global queue
-
-	#if we've been called to stop while waiting for current job to finish, just kill everything
-	if should_stop[0] is True:
-		sys.exit(0)
-		return
-
-	should_stop[0] = True
-	print "Dropping queued jobs"
-	#blame python for not giving an easy way to clear queues
-	while not queue.empty():
-		queue.get()
-		queue.task_done()
+def comment_handler(results_out, queue, active, lock, comment):
+	user_name = comment.author.user_name
 	
-	print "Waiting for running job to complete"
-	queue.join()
-	print "Thread returned. Writing results to results.json"
-	write_results()
-	print "Exiting..."
-	sys.exit(0)
+	with lock:
+		if author in results_out:
+			update_sub_post(user_name, post)
+		elif author not in active:
+			queue.put(user_name)
 
+def update_sub_post(author, post):
+	user_posts = self.post_results[author]
+	sub_post_count = user_posts.get(post.subreddit, 0)
+	user_posts[post.subreddit] = sub_post_count
+
+def user_handler(results, queue, active, lock):
+	reddit = create_agent()
+
+	while True:
+		username = queue.get()
+		active.put(username)
+
+		user = reddit.get_redditor(username)
+		user_comments = {}
+		for comment in user.get_comments(limit=None):
+			subreddit = comment.subreddit.display_name
+			user_comments[subreddit] = user_comments.get(subreddit, 0) + 1
+
+		with lock:
+			results[username] = user_comments
+			active.remove(username)
+
+# puts the final results in a json file
+def write_results(post_results):
+	with open('results.json', 'w') as f:
+		f.write(json.dumps(post_results))
+
+def read_results():
+	if not os.path.isfile('results.json'):
+		return {}
+
+	with open('results.json', 'r') as f:
+		return json.load(f)
+
+# create_agent constructs a thread-safe praw agent to be used by each process
 def create_agent():
 	user_agent = "Reddit graph crawler data visualization"
 	handler = MultiProcessHandler()
-	self.reddit = praw.reddit(user_agent=user_agent, handler=handler)
+	return praw.reddit(user_agent=user_agent, handler=handler)
 
 if __name__ == '__main__':
-	signal.signal(signal.SIGINT, finalize)
+	signal.signal(signal.SIGINT, signal.SIG_IGN)
+	
+	post_results = read_results()
+	processes = []
 
-	new_queue = NewWatcher(queue)
-	post_grabber = PostGrabber(queue, post_results)
+	try:
+		queue = SetQueue(maxsize=1000)
+		active = []
+		lock = threading.RLock()
 
-	new_queue.start()
-	post_grabber.start()
+		partial_handler = partial(comment_handler, results=post_results, queue=queue, active=active, lock = lock)
 
+		#start processes for user crawling
+		for x in range(4):
+			p = Process(target=user_handler, args=(post_results, queue, active, lock))
+			p.start()
+			processes.append(p)
+
+		reddit = create_agent()
+
+		#crawl the reddit stream for new posts
+		all_stream = praw.helpers.comment_stream(reddit, 'all', limit=None)
+		map(comment_crawler, all_stream)
+
+	except KeyboardInterrupt:
+		print 'comment crawling cancel requested'
+		print 'killing running jobs'
+		for p in processes:
+			p.terminate()
+	finally:
+		print 'finalizing jobs'
+		for p in processes:
+			p.join()
+
+		print 'logging results...'
+		write_results(post_results)
