@@ -1,110 +1,78 @@
 #!/usr/bin/env python
-import signal
 import json
 import praw 
-import threading 
 import os.path
-import Queue
+import sys
 from functools import partial
-from multiprocessing import Process
-from praw.handlers import MultiprocessHandler
-
-#helper class for unique 
-class SetQueue(Queue.Queue):
-
-    def _init(self, maxsize):
-        self.maxsize = maxsize
-        self.queue = set()
-
-    def _put(self, item):
-        self.queue.add(item)
-
-    def _get(self):
-        return self.queue.pop()
-
-def comment_handler(results_out, queue, active, lock, comment):
-	user_name = comment.author.user_name
-	
-	with lock:
-		if author in results_out:
-			update_sub_post(user_name, post)
-		elif author not in active:
-			queue.put(user_name)
-
-def update_sub_post(author, post):
-	user_posts = self.post_results[author]
-	sub_post_count = user_posts.get(post.subreddit, 0)
-	user_posts[post.subreddit] = sub_post_count
-
-def user_handler(results, queue, active, lock):
-	reddit = create_agent()
-
-	while True:
-		username = queue.get()
-		active.put(username)
-
-		user = reddit.get_redditor(username)
-		user_comments = {}
-		for comment in user.get_comments(limit=None):
-			subreddit = comment.subreddit.display_name
-			user_comments[subreddit] = user_comments.get(subreddit, 0) + 1
-
-		with lock:
-			results[username] = user_comments
-			active.remove(username)
+from requests.exceptions import HTTPError
 
 # puts the final results in a json file
 def write_results(post_results):
-	with open('results.json', 'w') as f:
-		f.write(json.dumps(post_results))
+	with open('results.json', 'w') as filestream:
+		filestream.write(json.dumps(post_results, indent = 4, separators = (',', ': ')))
 
+# Read results from file
 def read_results():
 	if not os.path.isfile('results.json'):
 		return {}
 
-	with open('results.json', 'r') as f:
-		return json.load(f)
+	try:
+		with open('results.json', 'r') as filestream:
+			return json.load(filestream)
+	except ValueError:
+		print 'Could not read old results, returning empty'
+		return {}
+
+# Handle a reddit comment
+def comment_handler(comment, post_results):
+	user_name = comment.author.name
+
+	sys.stdout.write("\r\x1b[KParsing user %s" % (user_name) )
+	sys.stdout.flush()
+
+	# If the user does not exist, get comment history
+	post_results[user_name] = post_results.get(user_name, {})
+	last_seen = post_results[user_name].get("___last_seen", None)
+	
+	for user_comment in comment.author.get_comments(limit=100):
+		if user_comment.id is last_seen:
+			break
+		# Get comment array per user per sub
+		comments_per_sub = post_results[user_name].get(user_comment.subreddit.display_name, [])
+		# Append comment id to comment per sub array
+		comments_per_sub.append(user_comment.id)
+		post_results[user_name][user_comment.subreddit.display_name] = comments_per_sub
+		
+	post_results[user_name]["___last_seen"] = comment.id
 
 # create_agent constructs a thread-safe praw agent to be used by each process
 def create_agent():
-	user_agent = "Reddit graph crawler data visualization by /u/alpacalex"
-	handler = MultiProcessHandler()
-	return praw.reddit(user_agent=user_agent, handler=handler)
+	user_agent = "Reddit graph crawler data visualization by /u/alpacalex & /u/MagnetScientist"
+	return praw.Reddit(user_agent=user_agent)
 
 if __name__ == '__main__':
-	signal.signal(signal.SIGINT, signal.SIG_IGN)
-	
+	# Read previous results (if any) from file
 	post_results = read_results()
-	processes = []
 
 	try:
-		queue = SetQueue(maxsize=1000)
-		active = []
-		lock = threading.RLock()
-
-		partial_handler = partial(comment_handler, results=post_results, queue=queue, active=active, lock = lock)
-
-		#start processes for user crawling
-		for x in range(4):
-			p = Process(target=user_handler, args=(post_results, queue, active, lock))
-			p.start()
-			processes.append(p)
-
 		reddit = create_agent()
 
-		#crawl the reddit stream for new posts
-		all_stream = praw.helpers.comment_stream(reddit, 'all', limit=None)
-		map(comment_crawler, all_stream)
+		partial_comment_handler = partial(comment_handler, post_results=post_results)
+
+		# Crawl the reddit stream for new posts
+		all_stream = praw.helpers.comment_stream(reddit, 'all', limit=None, verbosity=0)
+		
+		while True:
+			try:
+				# Pass each comment from the /r/all stream to the comment handler
+				map(partial_comment_handler, all_stream)
+			except HTTPError:
+				pass
+
 
 	except KeyboardInterrupt:
-		print 'comment crawling cancel requested'
-		print 'killing running jobs'
-		for p in processes:
-			p.terminate()
+		print '\nCancelled by user'
 	finally:
-		print 'finalizing jobs'
-		for p in processes:
-			p.join()
-
-		print 'logging results...'
+		print '\nLogging results...'
 		write_results(post_results)
+		print 'Finished'
