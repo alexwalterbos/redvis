@@ -48,6 +48,9 @@ def construct_graph(file_name, filter_min):
 	print 'reading crawl results'
 	crawl_results = read_results(file_name)
 
+	if not crawl_results:
+		return
+
 	node_dict = {}
 	edge_dict = {}
 

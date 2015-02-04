@@ -1,0 +1,28 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+	<title>Subreddit interaction visualization</title>
+
+	<style type="text/css">
+		html, body {
+			font: 10pt arial;
+		}
+		#subreddits {
+			position:absolute;
+			top:0; right:0;
+			bottom:0; left:0;
+			border: 1px solid lightgray;
+		}
+	</style>
+
+	<!-- local vis files -->
+	<script type="text/javascript" src="vis/dist/vis.js"></script>
+	<link href="vis/dist/vis.css" rel="stylesheet" type="text/css" />
+
+	<script src="visualization-logic.js"></script>
+</head>
+
+<body onload="draw()">
+<div id="subreddits"></div>
+</body>
+</html>
