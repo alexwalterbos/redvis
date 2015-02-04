@@ -27,3 +27,13 @@ The deliverable for this project will be the graphing tool.
 It will be provided via a web interface.
 It should be interactive; the user should be able to zoom in on relations, selecting and focussing on subreddits.
 The user must also be able to search a subreddit (by name, and if available) and select it as the root node for the graph.
+
+## Creating the visualization
+
+To get a proper visualization, first a dataset needs to be acquired. This can be done by running the `crawler.py` script. Run it with `python crawler.py` or simply `./crawler.py` if you are on a Unix-like system. This should be left to run for a long time, though results can be obtained after only a few hours of Reddit crawling. The script can be cancelled with `ctrl+c`, which will save the results so it can continue later with crawling if desired.
+//TODO prepare dataset
+
+Once a proper dataset has been created, it needs to be filtered to be useful for the visualization. This is done in two steps because the crawler script needs some information about the comments it crawls to maintain a proper state.
+
+//TODO transformation 
+//TODO display
