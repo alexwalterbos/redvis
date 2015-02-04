@@ -45,11 +45,10 @@ def build_nodes(edge_list):
 	return node_dict.values()
 
 def construct_graph(file_name, filter_min):
+	print 'reading crawl results'
 	crawl_results = read_results(file_name)
-	
-	if not crawl_results:
-		return
-	
+
+	node_dict = {}
 	edge_dict = {}
 
 	for user_key in crawl_results:
@@ -75,9 +74,11 @@ def construct_graph(file_name, filter_min):
 	# construct empty graph object with nodes and edges
 	graph_result = { 'nodes' : node_list, 'edges' : edge_list }
 
-	write_graph(graph_result)
-
 	print 'created graph file for ' + str(len(graph_result['nodes'])) + ' subreddits'
+	print 'no. of edges is ' + str(len(edge_dict))
+
+	print 'writing'
+	write_graph(graph_result)
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description='Transform reddit crawling results into a graphing result for vis.js')
