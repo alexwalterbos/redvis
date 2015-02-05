@@ -78,9 +78,9 @@ def construct_graph(file_name, filter_min):
 	graph_result = { 'nodes' : node_list, 'edges' : edge_list }
 
 	print 'created graph file for ' + str(len(graph_result['nodes'])) + ' subreddits'
-	print 'no. of edges is ' + str(len(edge_dict))
+	print 'no. of edges is ' + str(len(edge_list))
 
-	print 'writing'
+	print 'writing to graph.json'
 	write_graph(graph_result)
 
 if __name__ == '__main__':
