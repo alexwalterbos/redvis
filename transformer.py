@@ -39,10 +39,27 @@ def build_nodes(edge_list):
 	for edge in edge_list:
 		sub1 = edge['from']
 		sub2 = edge['to']
-		node_dict[sub1] = {'id' : sub1, 'label' : sub1}
-		node_dict[sub2] = {'id' : sub2, 'label' : sub2}
 
+		if sub1 not in node_dict:
+			node_dict[sub1] = {'index' : len(node_dict), 'label' : sub1}
+		if sub2 not in node_dict:
+			node_dict[sub2] = {'index' : len(node_dict), 'label' : sub2}
+
+		edge['from'] = node_dict[sub1]['index']
+		edge['to'] = node_dict[sub2]['index']
+		
 	return node_dict.values()
+
+def build_matrix(node_list, edge_list):
+	size = len(node_list)
+	#create size x size empty matrix
+	edge_matrix = [[0] * size for i in range(size)]
+
+	for edge in edge_list:
+		edge_matrix[edge['from']][edge['to']] = edge['value']
+		edge_matrix[edge['to']][edge['from']] = edge['value']
+
+	return edge_matrix
 
 def construct_graph(file_name, filter_min):
 	crawl_results = read_results(file_name)
@@ -70,14 +87,18 @@ def construct_graph(file_name, filter_min):
 		print 'filtering results below ' + str(filter_min)
 		edge_list = [edge for edge in edge_list if edge['value'] >= filter_min]
 
-	node_list = build_nodes(edge_list)	
+	node_list = build_nodes(edge_list)
+
+	edge_matrix = build_matrix(node_list, edge_list)
 
 	# construct empty graph object with nodes and edges
-	graph_result = { 'nodes' : node_list, 'edges' : edge_list }
+	graph_result = { 'groups' : node_list, 'matrix' : edge_matrix }
 
+	print 'created graph file for ' + str(len(graph_result['groups'])) + ' subreddits'
+	print 'no. of edges is ' + str(len(edge_list))
+
+	print 'writing'
 	write_graph(graph_result)
-
-	print 'created graph file for ' + str(len(graph_result['nodes'])) + ' subreddits'
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description='Transform reddit crawling results into a graphing result for vis.js')
