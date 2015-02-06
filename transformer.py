@@ -82,6 +82,7 @@ def construct_graph(file_name, filter_min):
 				add_or_increment_edge(edge_dict, subreddit1, subreddit2)
 
 	edge_list = edge_dict.values()
+	edge_list.sort(key = lambda l: l['value'])
 
 	if filter_min > 1:
 		print 'filtering results below ' + str(filter_min)
