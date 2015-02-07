@@ -50,6 +50,22 @@ def build_nodes(edge_list):
 		
 	return node_dict.values()
 
+# selects edges from edge_list such that the maximum number of subreddits doesn't exceed max_subs
+def trim_to_size(edge_list, max_subs):
+	subs = set()
+	trimmed_edge_list = []
+	
+	for edge in edge_list:
+		if len(subs) >= max_subs and (edge['from'] not in subs or edge['to'] not in subs):
+			continue
+
+		subs.add(edge['from'])
+		subs.add(edge['to'])
+		trimmed_edge_list.append(edge)
+	
+	return trimmed_edge_list
+
+
 def build_matrix(node_list, edge_list):
 	size = len(node_list)
 	#create size x size empty matrix
@@ -61,7 +77,7 @@ def build_matrix(node_list, edge_list):
 
 	return edge_matrix
 
-def construct_graph(file_name, filter_min):
+def construct_graph(file_name, filter_min, max_subs):
 	crawl_results = read_results(file_name)
 	
 	if not crawl_results:
@@ -88,6 +104,10 @@ def construct_graph(file_name, filter_min):
 		print 'filtering results below ' + str(filter_min)
 		edge_list = [edge for edge in edge_list if edge['value'] >= filter_min]
 
+	if max_subs > 0:
+		print 'limiting amount of subs to ' + str(max_subs)
+		edge_list = trim_to_size(edge_list, max_subs)
+
 	node_list = build_nodes(edge_list)
 
 	edge_matrix = build_matrix(node_list, edge_list)
@@ -105,7 +125,8 @@ if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description='Transform reddit crawling results into a graphing result for vis.js')
 	parser.add_argument('--file', action='store',  default='results.json', help='file to read crawling results from')
 	parser.add_argument('--min', action='store', default=1, help='Minumum number of users each relation needs for it to be added to the graph')
+	parser.add_argument('--subs', action='store', default=0, help='Maximum number of subs to include')
 	args = parser.parse_args()
 
-	construct_graph(args.file, int(args.min))
+	construct_graph(args.file, int(args.min), int(args.subs))
 
