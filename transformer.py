@@ -27,27 +27,25 @@ def add_or_increment_edge(edge_dict, node1, node2):
 		edge = edge_dict[(node2, node1)]
 	
 	if not edge:
-		edge = { 'from' : node1, 'to' : node2, 'value' : 1 }
+		edge = { 'from' : node1, 'to' : node2, 'fromCount' : 1, 'toCount' : 1}
 		edge_dict[(node1, node2)] = edge
 	else:
-		edge['value'] += 1
-
-	return edge
+		edge['fromCount'] += 1
+		edge['toCount'] += 1
 
 def build_nodes(edge_list):
 	node_dict = {}
+	
 	for edge in edge_list:
-		sub1 = edge['from']
-		sub2 = edge['to']
+	
+		if edge['from'] not in node_dict:
+			node_dict[edge['from']] = {'index' : len(node_dict), 'label' : edge['from']}
+		if edge['to'] not in node_dict:
+			node_dict[edge['to']] = {'index' : len(node_dict), 'label' : edge['to']}
 
-		if sub1 not in node_dict:
-			node_dict[sub1] = {'index' : len(node_dict), 'label' : sub1}
-		if sub2 not in node_dict:
-			node_dict[sub2] = {'index' : len(node_dict), 'label' : sub2}
+		edge['from'] = node_dict[edge['from']]['index']
+		edge['to'] = node_dict[edge['to']]['index']
 
-		edge['from'] = node_dict[sub1]['index']
-		edge['to'] = node_dict[sub2]['index']
-		
 	return node_dict.values()
 
 # selects edges from edge_list such that the maximum number of subreddits doesn't exceed max_subs
@@ -65,6 +63,21 @@ def trim_to_size(edge_list, max_subs):
 	
 	return trimmed_edge_list
 
+def normalize_edges(edge_list):
+	node_dict = {}
+	for edge in edge_list:
+		node_from = node_dict.get(edge['from'], 0)
+		node_to = node_dict.get(edge['to'], 0)
+		
+		node_from += edge['fromCount']
+		node_to += edge['toCount']
+
+		node_dict[edge['from']] = node_from
+		node_dict[edge['to']] = node_to
+
+	for edge in edge_list:
+		edge['fromCount'] = edge['fromCount'] / float(node_dict[edge['from']])
+		edge['toCount'] = edge['toCount'] / float(node_dict[edge['to']])
 
 def build_matrix(node_list, edge_list):
 	size = len(node_list)
@@ -72,12 +85,13 @@ def build_matrix(node_list, edge_list):
 	edge_matrix = [[0] * size for i in range(size)]
 
 	for edge in edge_list:
-		edge_matrix[edge['from']][edge['to']] = edge['value']
-		edge_matrix[edge['to']][edge['from']] = edge['value']
+		edge_matrix[edge['from']][edge['to']] = edge['fromCount']
+		edge_matrix[edge['to']][edge['from']] = edge['toCount']
 
 	return edge_matrix
 
-def construct_graph(file_name, filter_min, max_subs):
+def construct_graph(file_name, filter_min, max_subs, normalize):
+	print 'reading results'
 	crawl_results = read_results(file_name)
 	
 	if not crawl_results:
@@ -98,15 +112,19 @@ def construct_graph(file_name, filter_min, max_subs):
 				add_or_increment_edge(edge_dict, subreddit1, subreddit2)
 
 	edge_list = edge_dict.values()
-	edge_list.sort(key = lambda l: l['value'])
+	edge_list.sort(key = lambda l: l['fromCount'])
 
 	if filter_min > 1:
 		print 'filtering results below ' + str(filter_min)
-		edge_list = [edge for edge in edge_list if edge['value'] >= filter_min]
+		edge_list = [edge for edge in edge_list if edge['fromCount'] >= filter_min]
 
 	if max_subs > 0:
 		print 'limiting amount of subs to ' + str(max_subs)
 		edge_list = trim_to_size(edge_list, max_subs)
+
+	if normalize:
+		print 'normalizing results'
+		normalize_edges(edge_list)
 
 	node_list = build_nodes(edge_list)
 
@@ -126,7 +144,8 @@ if __name__ == '__main__':
 	parser.add_argument('--file', action='store',  default='results.json', help='file to read crawling results from')
 	parser.add_argument('--min', action='store', default=1, help='Minumum number of users each relation needs for it to be added to the graph')
 	parser.add_argument('--subs', action='store', default=0, help='Maximum number of subs to include')
+	parser.add_argument('--normalize', action='store_true', help='Normalizes the results, making the input of each node the same size')
 	args = parser.parse_args()
 
-	construct_graph(args.file, int(args.min), int(args.subs))
+	construct_graph(args.file, int(args.min), int(args.subs), args.normalize)
 
