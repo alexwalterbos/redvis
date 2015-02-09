@@ -16,8 +16,19 @@ def read_results(file_name):
 		return {}
 
 def write_graph(graph):
-	with open('graph.json', 'w') as filestream:
-		filestream.write(json.dumps(graph, indent = 4, separators = (',', ': ')))
+	for index, chunk in enumerate(chunks(graph['edges'], 10)):
+		write_json(chunk, 'edges-' + str(index) + '.json')
+	
+	write_json(graph['groups'], 'groups.json')
+
+def write_json(obj, filename):
+	with open(filename, 'w') as filestream:
+		filestream.write(json.dumps(obj, indent = 4, separators = (',', ': ')))
+
+# splits a list l into n evenly sized chunks (interlaced with stepping of n)
+def chunks(lst, n):
+	for i in xrange(n):
+		yield lst[i::n]
 
 def add_or_increment_edge(edge_dict, node1, node2):
 	edge = None
@@ -27,8 +38,7 @@ def add_or_increment_edge(edge_dict, node1, node2):
 		edge = edge_dict[(node2, node1)]
 	
 	if not edge:
-		edge = { 'from' : node1, 'to' : node2, 'fromCount' : 1, 'toCount' : 1}
-		edge_dict[(node1, node2)] = edge
+		edge_dict[(node1, node2)] = { 'from' : node1, 'to' : node2, 'fromCount' : 1, 'toCount' : 1}
 	else:
 		edge['fromCount'] += 1
 		edge['toCount'] += 1
@@ -39,14 +49,14 @@ def build_nodes(edge_list):
 	for edge in edge_list:
 	
 		if edge['from'] not in node_dict:
-			node_dict[edge['from']] = {'index' : len(node_dict), 'label' : edge['from']}
+			node_dict[edge['from']] = len(node_dict)
 		if edge['to'] not in node_dict:
-			node_dict[edge['to']] = {'index' : len(node_dict), 'label' : edge['to']}
+			node_dict[edge['to']] = len(node_dict)
 
-		edge['from'] = node_dict[edge['from']]['index']
-		edge['to'] = node_dict[edge['to']]['index']
+		edge['from'] = node_dict[edge['from']]
+		edge['to'] = node_dict[edge['to']]
 
-	return node_dict.values()
+	return sorted(node_dict, key=node_dict.get)
 
 # selects edges from edge_list such that the maximum number of subreddits doesn't exceed max_subs
 def trim_to_size(edge_list, max_subs):
@@ -112,7 +122,6 @@ def construct_graph(file_name, filter_min, max_subs, normalize):
 				add_or_increment_edge(edge_dict, subreddit1, subreddit2)
 
 	edge_list = edge_dict.values()
-	edge_list.sort(key = lambda l: l['fromCount'])
 
 	if filter_min > 1:
 		print 'filtering results below ' + str(filter_min)
@@ -128,12 +137,10 @@ def construct_graph(file_name, filter_min, max_subs, normalize):
 
 	node_list = build_nodes(edge_list)
 
-	edge_matrix = build_matrix(node_list, edge_list)
-
 	# construct empty graph object with nodes and edges
-	graph_result = { 'groups' : node_list, 'matrix' : edge_matrix }
+	graph_result = { 'groups' : node_list, 'edges' : edge_list }
 
-	print 'created graph file for ' + str(len(graph_result['groups'])) + ' subreddits'
+	print 'created graph file for ' + str(len(node_list)) + ' subreddits'
 	print 'no. of edges is ' + str(len(edge_list))
 
 	print 'writing'
