@@ -49,6 +49,7 @@ class RedVisHandler(BaseHTTPRequestHandler):
 	#Handler for the POST requests
 	def do_POST(self):
 		if self.path=="/filter":
+			print "processing filter request"
 			try:
 				form = cgi.FieldStorage(
 					fp=self.rfile, 
@@ -59,30 +60,31 @@ class RedVisHandler(BaseHTTPRequestHandler):
 	
 				print "Filter triggered with:"
 	
-				form_edge = form["edge_value"]
+				form_edge = form["edge_value"] if ("edge_value" in form) else False
 				if(form_edge):
 					print "Min edge value: %s" % form_edge.value
-					edge_value = form_edge.value
+					edge_value = int(form_edge.value)
 				else:
-					edge_value = 70 # Default threshold
+					edge_value = 1
 	
-				form_subm = form["sub_max"]
+				form_subm = form["sub_max"] if ("sub_max" in form) else False
 				if(form_subm):
-					print "Subreddit: %s" % form_subm.value
-					sub_max = form_subm.value
+					print "Subreddit max: %s" % form_subm.value
+					sub_max = int(form_subm.value)
 				else:
-					sub_max = 0
+					sub_max = 50
 	
 				form_subn = form["sub_name"] if ("sub_name" in form) else False
 				if(form_subn):
-					print "Subreddit: %s" % form_subn.value
-					sub_name = form_subn.value
+					print "Subreddit name: %s" % form_subn.value
+					sub_name = form_subn.value.lower()
 				else:
-					sub_name = ""
+					sub_name = "askreddit"
+
+				transformer.construct_graph('results.json', edge_value, sub_max, False, sub_name)
 	
-				transformer.construct_graph('results.json', edge_value, sub_max, False)
-	
-				self.send_response(200)
+				self.send_response(303)
+				self.send_header("Location", "/")
 				self.end_headers()
 				self.wfile.write("Filtering complete.")
 				return			

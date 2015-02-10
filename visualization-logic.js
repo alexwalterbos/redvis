@@ -39,7 +39,7 @@ function start(json){
 		.attr("transform", "translate(" + w / 2 + "," + h / 2 + ")");
 	
 	chord = d3.layout.chord()
-		.padding(.05)
+		.padding(.03)
 		.sortGroups(d3.descending)
 		.sortSubgroups(sortSubgroups)
 		.matrix(json.matrix);
@@ -199,7 +199,39 @@ function shuffleArray(array) {
 }
 
 function trigger() {
-	// todo send post to server
-	var edgeFilter = document.getElementById("edge-filter").value;
-	var subFilter = document.getElementById("sub-filter").value;
+
+	var edgeFilter = d3.select("#edge-filter").property("value");
+	var subNumFilter = d3.select("#subnumber-filter").property("value");
+	var subNameFilter = d3.select("#subname-filter").property("value");
+	
+	filter(edgeFilter, subNameFilter, subNumFilter);
+
+}
+
+function filter(edgeFilter, subNameFilter, subNumFilter) {
+
+    var form = document.createElement("form");
+    form.setAttribute("method", "post");
+    form.setAttribute("action", "/filter");
+    form.setAttribute('onSubmit', 'window.location.reload()');
+
+    var params = {
+	    "edge_value": edgeFilter,
+	    "sub_max": subNumFilter,
+	    "sub_name": subNameFilter
+    }
+
+    for(var key in params) {
+        if(params.hasOwnProperty(key) && params[key]) {
+            var hiddenField = document.createElement("input");
+            hiddenField.setAttribute("type", "hidden");
+            hiddenField.setAttribute("name", key);
+            hiddenField.setAttribute("value", params[key]);
+
+            form.appendChild(hiddenField);
+         }
+    }
+
+    document.body.appendChild(form);
+    form.submit();
 }
