@@ -131,14 +131,16 @@ function stylePaths() {
 		.data(chord.chords)
 		.enter().append("svg:path")
 		.style("fill", function(d) { 
-			return fill(d.target.index); 
+			var cSource = fill(d.source.index);
+			var cTarget = fill(d.target.index);
+			return HSVtoRGB((cSource.h + cTarget.h)/2, cTarget.s, cTarget.v); 
 		})
 		.attr("d", d3.svg.chord().radius(inner))
 		.style("opacity", 1);
 }
 
 function getfill(sub) {
-	return fill(sub.index);
+	return HSVtoRGB(fill(sub.index));
 }
 
 /** Returns an array of tick angles and labels, given a group. */
