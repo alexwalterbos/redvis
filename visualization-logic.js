@@ -1,27 +1,33 @@
-var svg, chord, inner, outer, fill, data;
-load();
-
-function load() {
-	d3.json('graph.json', function(error, json) {
-		start(json);
-	});
-}
+var svg, chord, inner, outer, fill;
+hideLoad();
 
 function sortSubgroups(a, b){
 	return d3.ascending(a,b);
 }
 
-function start(json){
-	data = json;
+function reset() {
+	d3.select('svg').remove();
+	showLoad();
+}
 
+function hideLoad() {
+	d3.select('#update').attr('disabled', null);
+}
+
+function showLoad() {
+	d3.select('#update').attr('disabled', 'disabled');
+}
+
+function start(json){
+	hideLoad();
 	// Generate colors
 	colorRange = [];
-	for(i = 0; i < data.matrix.length; i++){
-		colorRange.push(HSVtoRGB( i * 1/data.matrix.length, 0.6, 1));
+	for(i = 0; i < json.matrix.length; i++){
+		colorRange.push(HSVtoRGB( i * 1/json.matrix.length, 0.6, 1));
 	}
 	shuffleArray(colorRange);
 	fill = d3.scale.ordinal()
-		.domain(d3.range(data.matrix.length))
+		.domain(d3.range(json.matrix.length))
 		.range(colorRange);
 
 	var w = window.innerWidth,
@@ -45,13 +51,8 @@ function start(json){
 		.matrix(json.matrix);
 
 	//Draw everything
-	draw();
-}
-
-
-function draw() {
 	addGroups();
-	addTicks();
+	addTicks(json.groups);
 	stylePaths();
 }
 
@@ -67,13 +68,15 @@ function addGroups() {
 		.on("mouseout", fade(1));
 }
 
-function addTicks() {
+function addTicks(groups) {
+	var boundTicks = groupTicks.bind(null, groups);
+
 	var ticks = svg.append("svg:g")
 		.selectAll("g")
 		.data(chord.groups)
 		.enter().append("svg:g")
 		.selectAll("g")
-		.data(groupTicks)
+		.data(boundTicks)
 		.enter().append("svg:g")
 		.attr("transform", function(d) {
 			return "rotate(" + (d.angle * 180 / Math.PI - 90) + ")"
@@ -120,10 +123,10 @@ function getfill(sub) {
 }
 
 /** Returns an array of tick angles and labels, given a group. */
-function groupTicks(d) {
+function groupTicks(groups, d) {
 	result = [{
 		angle: d.startAngle + ((d.endAngle - d.startAngle) / 2),
-		label: data.groups[d.index]
+		label: groups[d.index]
 	}];
 	return result;
 }
@@ -139,12 +142,6 @@ function fade(opacity) {
 	.style("opacity", opacity);
 	};
 }
-
-function reset() {
-	d3.select("svg").remove();
-	setTimeout(load, 250);
-}
-
 
 /*
  * Transform a hsv color to rgb
@@ -199,7 +196,7 @@ function shuffleArray(array) {
 }
 
 function trigger() {
-
+	reset();
 	var edgeFilter = d3.select("#edge-filter").property("value");
 	var subNumFilter = d3.select("#subnumber-filter").property("value");
 	var subNameFilter = d3.select("#subname-filter").property("value");
@@ -210,28 +207,30 @@ function trigger() {
 
 function filter(edgeFilter, subNameFilter, subNumFilter) {
 
-    var form = document.createElement("form");
-    form.setAttribute("method", "post");
-    form.setAttribute("action", "/filter");
-    form.setAttribute('onSubmit', 'window.location.reload()');
+	var params = [];
+	if(edgeFilter) {
+		params.push('edge_value=' + encodeURIComponent(edgeFilter));
+	}
+	if(subNameFilter) {
+		params.push('sub_name=' + encodeURIComponent(subNameFilter));
+	}
+	if(subNumFilter) {
+		params.push('sub_max=' + encodeURIComponent(subNumFilter));
+	}
 
-    var params = {
-	    "edge_value": edgeFilter,
-	    "sub_max": subNumFilter,
-	    "sub_name": subNameFilter
-    }
+	var form = params.join('&');
 
-    for(var key in params) {
-        if(params.hasOwnProperty(key) && params[key]) {
-            var hiddenField = document.createElement("input");
-            hiddenField.setAttribute("type", "hidden");
-            hiddenField.setAttribute("name", key);
-            hiddenField.setAttribute("value", params[key]);
+	var http = new XMLHttpRequest();
+	var url = '/filter';
+	http.open('POST', url, true);
 
-            form.appendChild(hiddenField);
-         }
-    }
+	http.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
 
-    document.body.appendChild(form);
-    form.submit();
+	http.onreadystatechange = function() {
+		if(http.readyState === 4 && http.status === 200) {
+			start(JSON.parse(http.responseText));
+		}
+	};
+
+	http.send(form);
 }
