@@ -18,24 +18,20 @@ class RedVisHandler(BaseHTTPRequestHandler):
 			#Check the file extension required and
 			#set the right mime type
 
-			sendReply = False
 			if self.path.endswith(".html"):
 				mimetype='text/html'
-				sendReply = True
 			if self.path.endswith(".jpg"):
 				mimetype='image/jpg'
-				sendReply = True
 			if self.path.endswith(".gif"):
 				mimetype='image/gif'
-				sendReply = True
 			if self.path.endswith(".js"):
 				mimetype='application/javascript'
-				sendReply = True
 			if self.path.endswith(".css"):
 				mimetype='text/css'
-				sendReply = True
+			if self.path.endswith(".json"):
+				mimetype='application/json'
 
-			if sendReply == True:
+			if mimetype:
 				#Open the static file requested and send it
 				f = open(curdir + sep + self.path) 
 				self.send_response(200)
@@ -60,9 +56,9 @@ class RedVisHandler(BaseHTTPRequestHandler):
 
 			print "Filter triggered with:"
 			if(form["edge_value"].value):
-				print "Min edge value %s:" % form["edge_value"].value
+				print "Min edge value: %s" % form["edge_value"].value
 			if(form["sub_name"].value):
-				print "Subreddit %s:" % form["subreddit"].value
+				print "Subreddit: %s" % form["sub_name"].value
 			self.send_response(200)
 			self.end_headers()
 			self.wfile.write("Filtering complete.")
