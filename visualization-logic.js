@@ -1,8 +1,23 @@
 var svg, chord, inner, outer, fill;
 hideLoad();
+loadGroups();
 
-function sortSubgroups(a, b){
-	return d3.ascending(a,b);
+function loadGroups() {
+	var http = new XMLHttpRequest();
+	http.open('GET', '/groups.json', true);
+	http.onreadystatechange = function() {
+		if(http.readyState === 4 && http.status === 200) {
+			d3.select('#subreddits').selectAll('option')
+				.data(JSON.parse(http.responseText))
+				.enter()
+				.append('option')
+				.property('value', function(d) {
+					return d;
+				});
+		}
+	};
+
+	http.send()
 }
 
 function reset() {
@@ -66,6 +81,10 @@ function addGroups() {
 		.attr("d", d3.svg.arc().innerRadius(inner).outerRadius(outer))
 		.on("mouseover", fade(.1))
 		.on("mouseout", fade(1));
+}
+
+function sortSubgroups(a, b){
+	return d3.ascending(a,b);
 }
 
 function addTicks(groups) {

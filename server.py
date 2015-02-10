@@ -12,16 +12,22 @@ PORT_NUMBER = 8000
 #the browser 
 class RedVisHandler(BaseHTTPRequestHandler):
 
-	def __init__(self, crawl_results, *args):
+	def __init__(self, crawl_results, groups, *args):
 		self.crawl_results = crawl_results
+		self.groups = groups
 		BaseHTTPRequestHandler.__init__(self, *args)
 
 
 	#Handler for the GET requests
 	def do_GET(self):
-		if self.path=="/":
+		if self.path == "/":
 			self.path="/subreddit-interactions.html"
-
+		elif self.path == '/groups.json':			
+			self.send_response(200)
+			self.send_header('Content-type', 'application/json')
+			self.end_headers()
+			self.wfile.write(json.dumps(self.groups))
+			return
 		try:
 			#Check the file extension required and
 			#set the right mime type
@@ -103,15 +109,16 @@ class RedVisHandler(BaseHTTPRequestHandler):
 				return
 
 # because HTTPServer takes a class definition, we need to return a lambda
-def handleRequestWithResults(results):
-	return lambda *args: RedVisHandler(results, *args)
+def handleRequestWithResults(results, groups):
+	return lambda *args: RedVisHandler(results, groups, *args)
 			
 try:
 	#Create a web server and define the handler to manage the
 	#incoming request
 	print 'reading crawling results'
 	crawl_results = transformer.read_results('results.json')
-	handler = handleRequestWithResults(crawl_results)
+	groups = transformer.get_subreddits(crawl_results)
+	handler = handleRequestWithResults(crawl_results, groups)
 	server = HTTPServer(('', PORT_NUMBER), handler)
 	print 'Started httpserver on port ' , PORT_NUMBER
 	
