@@ -6,9 +6,10 @@
 <body>
 	<input id='edge-filter' type='number' placeholder='Minimal connectivity'/>
 	<input id='subnumber-filter' type='number' placeholder='Max. number of subs'/>
-	<input id='subname-filter' type='text' placeholder='Name of the sub to filter'/>
+	<input id='subname-filter' type='text' placeholder='Name of the sub to filter' list='subreddits'/>
+	<datalist id='subreddits'>
+	</datalist>
 	<input id='update' name='refresh' type='button' value='Update' onclick='trigger()'/>
-
 	<script src="http://d3js.org/d3.v3.min.js"></script>
 	<script src="visualization-logic.js"></script>
 </body>

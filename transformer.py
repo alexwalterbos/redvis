@@ -124,9 +124,12 @@ def construct_graph(crawl_results, filter_min, max_subs, normalize, sub):
 		print 'filtering results below ' + str(filter_min)
 		edge_list = [edge for edge in edge_list if edge['fromCount'] >= filter_min]
 
-	if sub:
+	if not sub:
+		#filter for highest connectivity
+		sub = edge_list[len(edge_list) - 1]['from']
+	else:
 		print 'filtering for subreddit ' + str(sub)
-		edge_list = trim_to_size(edge_list, sub, max_subs)
+	edge_list = trim_to_size(edge_list, sub, max_subs)
 
 	if normalize:
 		print 'normalizing results'
@@ -142,6 +145,17 @@ def construct_graph(crawl_results, filter_min, max_subs, normalize, sub):
 	print 'created graph file for ' + str(len(graph_result['groups'])) + ' subreddits'
 	print 'no. of edges is ' + str(len(edge_list))
 	return graph_result
+
+def get_subreddits(crawl_results):
+	subs = set()
+	for user_key in crawl_results:
+		user_subs = crawl_results[user_key]
+		if '___last_seen' in user_subs:
+			del user_subs['___last_seen']
+		for subreddit_key in user_subs:
+			subs.add(subreddit_key)
+	
+	return list(subs)
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description='Transform reddit crawling results into a graphing result for vis.js')
@@ -162,5 +176,5 @@ if __name__ == '__main__':
 	graph = construct_graph(results, int(args.min), int(args.subCount), args.normalize, lower_sub)
 
 	print 'writing'
-	write_results(graph)
+	write_graph(graph)
 
