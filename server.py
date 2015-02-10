@@ -2,6 +2,8 @@
 from BaseHTTPServer import BaseHTTPRequestHandler,HTTPServer
 from os import curdir, sep
 import cgi
+import transformer
+import traceback
 
 PORT_NUMBER = 8000
 
@@ -47,22 +49,50 @@ class RedVisHandler(BaseHTTPRequestHandler):
 	#Handler for the POST requests
 	def do_POST(self):
 		if self.path=="/filter":
-			form = cgi.FieldStorage(
-				fp=self.rfile, 
-				headers=self.headers,
-				environ={'REQUEST_METHOD':'POST',
-		                 'CONTENT_TYPE':self.headers['Content-Type'],
-			})
+			try:
+				form = cgi.FieldStorage(
+					fp=self.rfile, 
+					headers=self.headers,
+					environ={'REQUEST_METHOD':'POST',
+						 'CONTENT_TYPE':self.headers['Content-Type'],
+				})
+	
+				print "Filter triggered with:"
+	
+				form_edge = form["edge_value"]
+				if(form_edge):
+					print "Min edge value: %s" % form_edge.value
+					edge_value = form_edge.value
+				else:
+					edge_value = 70 # Default threshold
+	
+				form_subm = form["sub_max"]
+				if(form_subm):
+					print "Subreddit: %s" % form_subm.value
+					sub_max = form_subm.value
+				else:
+					sub_max = 0
+	
+				form_subn = form["sub_name"] if ("sub_name" in form) else False
+				if(form_subn):
+					print "Subreddit: %s" % form_subn.value
+					sub_name = form_subn.value
+				else:
+					sub_name = ""
+	
+				transformer.construct_graph('results.json', edge_value, sub_max, False)
+	
+				self.send_response(200)
+				self.end_headers()
+				self.wfile.write("Filtering complete.")
+				return			
+			except Exception as ex:
+				print traceback.format_exc()
+				self.send_response(500)
+				self.end_headers()
+				self.wfile.write("Internal Server Error")
+				return
 
-			print "Filter triggered with:"
-			if(form["edge_value"].value):
-				print "Min edge value: %s" % form["edge_value"].value
-			if(form["sub_name"].value):
-				print "Subreddit: %s" % form["sub_name"].value
-			self.send_response(200)
-			self.end_headers()
-			self.wfile.write("Filtering complete.")
-			return			
 			
 			
 try:

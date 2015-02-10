@@ -27,7 +27,7 @@ function start(json){
 	var w = window.innerWidth,
 		h = window.innerHeight;
 
-	inner = Math.min(w, h) * .35;
+	inner = Math.min(w, h) * .32;
 	outer = inner * 1.08;
 	
 	
@@ -196,4 +196,10 @@ function shuffleArray(array) {
         array[j] = temp;
     }
     return array;
+}
+
+function trigger() {
+	// todo send post to server
+	var edgeFilter = document.getElementById("edge-filter").value;
+	var subFilter = document.getElementById("sub-filter").value;
 }
