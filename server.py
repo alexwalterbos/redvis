@@ -4,13 +4,19 @@ from os import curdir, sep
 import cgi
 import transformer
 import traceback
+import json
 
 PORT_NUMBER = 8000
 
 #This class will handles any incoming request from
 #the browser 
 class RedVisHandler(BaseHTTPRequestHandler):
-	
+
+	def __init__(self, crawl_results, *args):
+		self.crawl_results = crawl_results
+		BaseHTTPRequestHandler.__init__(self, *args)
+
+
 	#Handler for the GET requests
 	def do_GET(self):
 		if self.path=="/":
@@ -81,12 +87,13 @@ class RedVisHandler(BaseHTTPRequestHandler):
 				else:
 					sub_name = "askreddit"
 
-				transformer.construct_graph('results.json', edge_value, sub_max, False, sub_name)
+				graph = transformer.construct_graph(self.crawl_results, edge_value, sub_max, False, sub_name)
 	
-				self.send_response(303)
+				self.send_response(200)
+				self.send_header('Content-Type', 'application/json')
 				self.send_header("Location", "/")
 				self.end_headers()
-				self.wfile.write("Filtering complete.")
+				self.wfile.write(json.dumps(graph))
 				return			
 			except Exception as ex:
 				print traceback.format_exc()
@@ -95,12 +102,17 @@ class RedVisHandler(BaseHTTPRequestHandler):
 				self.wfile.write("Internal Server Error")
 				return
 
-			
+# because HTTPServer takes a class definition, we need to return a lambda
+def handleRequestWithResults(results):
+	return lambda *args: RedVisHandler(results, *args)
 			
 try:
 	#Create a web server and define the handler to manage the
 	#incoming request
-	server = HTTPServer(('', PORT_NUMBER), RedVisHandler)
+	print 'reading crawling results'
+	crawl_results = transformer.read_results('results.json')
+	handler = handleRequestWithResults(crawl_results)
+	server = HTTPServer(('', PORT_NUMBER), handler)
 	print 'Started httpserver on port ' , PORT_NUMBER
 	
 	#Wait forever for incoming htto requests
