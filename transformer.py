@@ -102,13 +102,7 @@ def build_matrix(node_list, edge_list):
 
 	return edge_matrix
 
-def construct_graph(file_name, filter_min, max_subs, normalize, sub):
-	print 'reading results'
-	crawl_results = read_results(file_name)
-	
-	if not crawl_results:
-		return
-	
+def construct_graph(crawl_results, filter_min, max_subs, normalize, sub):
 	edge_dict = {}
 
 	for user_key in crawl_results:
@@ -147,9 +141,7 @@ def construct_graph(file_name, filter_min, max_subs, normalize, sub):
 
 	print 'created graph file for ' + str(len(graph_result['groups'])) + ' subreddits'
 	print 'no. of edges is ' + str(len(edge_list))
-
-	print 'writing'
-	write_graph(graph_result)
+	return graph_result
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description='Transform reddit crawling results into a graphing result for vis.js')
@@ -163,5 +155,12 @@ if __name__ == '__main__':
 	lower_sub = args.sub
 	if lower_sub:
 		lower_sub.lower()
-	construct_graph(args.file, int(args.min), int(args.subCount), args.normalize, lower_sub)
+
+	print 'reading results'
+	results = read_results(args.file)
+
+	graph = construct_graph(results, int(args.min), int(args.subCount), args.normalize, lower_sub)
+
+	print 'writing'
+	write_results(graph)
 
