@@ -123,7 +123,7 @@ function getfill(sub) {
 function groupTicks(d) {
 	result = [{
 		angle: d.startAngle + ((d.endAngle - d.startAngle) / 2),
-		label: data.groups[d.index].label
+		label: data.groups[d.index]
 	}];
 	return result;
 }
