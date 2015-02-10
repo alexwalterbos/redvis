@@ -46,21 +46,33 @@ def build_nodes(edge_list):
 		edge['from'] = node_dict[edge['from']]['index']
 		edge['to'] = node_dict[edge['to']]['index']
 
-	return node_dict.values()
+	return [ item['label'] for item in sorted(node_dict.values(), key= lambda node : node['index']) ]
 
 # selects edges from edge_list such that the maximum number of subreddits doesn't exceed max_subs
-def trim_to_size(edge_list, max_subs):
+def trim_to_size(edge_list, subreddit, max_subs):
 	subs = set()
 	trimmed_edge_list = []
-	
-	for edge in edge_list:
-		if len(subs) >= max_subs and (edge['from'] not in subs or edge['to'] not in subs):
+
+	sorted_edges = sorted(edge_list, key= lambda edge : edge['fromCount'], reverse=True)
+
+	# first step filters for all direct relations in 'edge_list' to 'subreddit', with a maximum of 'max_subs'
+	for edge in sorted_edges:
+		if edge['from'].lower() != subreddit and edge['to'].lower() != subreddit:
 			continue
+
+		if len(subs) >= max_subs and not max_subs <= 0:
+			break
 
 		subs.add(edge['from'])
 		subs.add(edge['to'])
 		trimmed_edge_list.append(edge)
-	
+
+
+	# second step filters subreddits for relations between subreddits that are not 'subreddit'
+	for edge in sorted_edges:
+		if (edge['from'] in subs and edge['to'] in subs) and not (edge['from'].lower() == subreddit or edge['to'].lower() == subreddit):
+			trimmed_edge_list.append(edge)
+
 	return trimmed_edge_list
 
 def normalize_edges(edge_list):
@@ -90,7 +102,7 @@ def build_matrix(node_list, edge_list):
 
 	return edge_matrix
 
-def construct_graph(file_name, filter_min, max_subs, normalize):
+def construct_graph(file_name, filter_min, max_subs, normalize, sub):
 	print 'reading results'
 	crawl_results = read_results(file_name)
 	
@@ -118,9 +130,9 @@ def construct_graph(file_name, filter_min, max_subs, normalize):
 		print 'filtering results below ' + str(filter_min)
 		edge_list = [edge for edge in edge_list if edge['fromCount'] >= filter_min]
 
-	if max_subs > 0:
-		print 'limiting amount of subs to ' + str(max_subs)
-		edge_list = trim_to_size(edge_list, max_subs)
+	if sub:
+		print 'filtering for subreddit ' + str(sub)
+		edge_list = trim_to_size(edge_list, sub, max_subs)
 
 	if normalize:
 		print 'normalizing results'
@@ -143,9 +155,13 @@ if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description='Transform reddit crawling results into a graphing result for vis.js')
 	parser.add_argument('--file', action='store',  default='results.json', help='file to read crawling results from')
 	parser.add_argument('--min', action='store', default=1, help='Minumum number of users each relation needs for it to be added to the graph')
-	parser.add_argument('--subs', action='store', default=0, help='Maximum number of subs to include')
+	parser.add_argument('--subCount', action='store', default=0, help='Maximum number of subs to include')
 	parser.add_argument('--normalize', action='store_true', help='Normalizes the results, making the input of each node the same size')
+	parser.add_argument('--sub', action='store', default=None, help='Set a subreddit as a starting point for the selection')
 	args = parser.parse_args()
-
-	construct_graph(args.file, int(args.min), int(args.subs), args.normalize)
+	
+	lower_sub = args.sub
+	if lower_sub:
+		lower_sub.lower()
+	construct_graph(args.file, int(args.min), int(args.subCount), args.normalize, lower_sub)
 
