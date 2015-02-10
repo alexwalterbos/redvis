@@ -38,7 +38,7 @@ function start(json){
 	// Generate colors
 	colorRange = [];
 	for(i = 0; i < json.matrix.length; i++){
-		colorRange.push(HSVtoRGB( i * 1/json.matrix.length, 0.6, 1));
+		colorRange.push(HSVtoRGB(i * 1/json.matrix.length, 0.6, 1));
 	}
 	shuffleArray(colorRange);
 	fill = d3.scale.ordinal()
@@ -131,16 +131,14 @@ function stylePaths() {
 		.data(chord.chords)
 		.enter().append("svg:path")
 		.style("fill", function(d) { 
-			var cSource = fill(d.source.index);
-			var cTarget = fill(d.target.index);
-			return HSVtoRGB((cSource.h + cTarget.h)/2, cTarget.s, cTarget.v); 
+			return "url(#" + getGradientId(d) + ")";
 		})
 		.attr("d", d3.svg.chord().radius(inner))
 		.style("opacity", 1);
 }
 
 function getfill(sub) {
-	return HSVtoRGB(fill(sub.index));
+	return fill(sub.index);
 }
 
 /** Returns an array of tick angles and labels, given a group. */
@@ -200,6 +198,65 @@ function HSVtoRGB(h, s, v) {
 function componentToHex(color){
 	var hex = color.toString(16);
 	return hex.length == 1 ? "0" + hex : hex;
+}
+
+function angleToPoints(angle) {
+	var segment = Math.floor(angle / Math.PI * 2) + 2;
+	var diagonal =  (1/2 * segment + 1/4) * Math.PI;
+	var op = Math.cos(Math.abs(diagonal - angle)) * Math.sqrt(2);
+	var x = op * Math.cos(angle);
+	var y = op * Math.sin(angle);
+
+	return {
+		x1: x < 0 ? 1 : 0,
+		y1: y < 0 ? 1 : 0,
+		x2: x >= 0 ? x : x + 1,
+		y2: y >= 0 ? y : y + 1
+	};
+}
+
+function getGradientId(d){
+	cSource = fill(d.source.index);
+	cTarget = fill(d.target.index);
+
+	var id = d.source.index + "_" + d.target.index
+	var aSource = d.source.startAngle + ((d.source.endAngle - d.source.startAngle) / 2);
+	var aTarget = d.target.startAngle + ((d.target.endAngle - d.source.startAngle) / 2);
+
+	var aPath;
+
+	if (aSource > aTarget) {
+		aPath = aTarget + ((aSource - aTarget) / 2);
+		if ((aSource - aTarget) > (Math.PI / 2)) {
+			aPath = aPath - (Math.PI / 2);
+		}
+	}
+	else {
+		aPath = aSource + ((aTarget - aSource) / 2);
+	}
+
+	var points = angleToPoints(aPath);
+
+	var gradient = svg.append("svg:defs")
+	    .append("svg:linearGradient")
+	    .attr("id", id )
+	    .attr("x1", points.x1)
+	    .attr("y1", points.y1)
+	    .attr("x2", points.x2)
+	    .attr("y2", points.y2)
+	    .attr("spreadMethod", "pad");
+	
+	gradient.append("svg:stop")
+	    .attr("offset", "0%")
+	    .attr("stop-color", cTarget)
+	    .attr("stop-opacity", 1);
+	
+	gradient.append("svg:stop")
+	    .attr("offset", "100%")
+	    .attr("stop-color", cSource)
+	    .attr("stop-opacity", 1);
+
+	return id;
 }
 
 /**

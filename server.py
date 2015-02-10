@@ -44,6 +44,8 @@ class RedVisHandler(BaseHTTPRequestHandler):
 				mimetype='text/css'
 			if self.path.endswith(".json"):
 				mimetype='application/json'
+			if self.path.endswith(".ico"):
+				mimetype='image/gif'
 
 			if mimetype:
 				#Open the static file requested and send it
