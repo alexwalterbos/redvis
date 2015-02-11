@@ -14,6 +14,8 @@ function loadGroups() {
 				.property('value', function(d) {
 					return d;
 				});
+
+			trigger();
 		}
 	};
 
@@ -35,10 +37,11 @@ function showLoad() {
 
 function start(json){
 	hideLoad();
+
 	// Generate colors
 	colorRange = [];
 	for(i = 0; i < json.matrix.length; i++){
-		colorRange.push(HSVtoRGB( i * 1/json.matrix.length, 0.6, 1));
+		colorRange.push(HSVtoRGB(i * 1/json.matrix.length, 0.6, 1));
 	}
 	shuffleArray(colorRange);
 	fill = d3.scale.ordinal()
@@ -62,13 +65,13 @@ function start(json){
 	chord = d3.layout.chord()
 		.padding(.03)
 		.sortGroups(d3.descending)
-		.sortSubgroups(sortSubgroups)
+		.sortSubgroups(d3.ascending)
 		.matrix(json.matrix);
 
 	//Draw everything
 	addGroups();
 	addTicks(json.groups);
-	stylePaths();
+	appendConnections();
 }
 
 function addGroups() {
@@ -81,10 +84,6 @@ function addGroups() {
 		.attr("d", d3.svg.arc().innerRadius(inner).outerRadius(outer))
 		.on("mouseover", fade(.1))
 		.on("mouseout", fade(1));
-}
-
-function sortSubgroups(a, b){
-	return d3.ascending(a,b);
 }
 
 function addTicks(groups) {
@@ -124,14 +123,14 @@ function addTicks(groups) {
 		});
 }
 
-function stylePaths() {
+function appendConnections() {
 	svg.append("svg:g")
 		.attr("class", "chord")
 		.selectAll("path")
 		.data(chord.chords)
 		.enter().append("svg:path")
 		.style("fill", function(d) { 
-			return fill(d.target.index); 
+			return "url(#" + createGradientForConnection(d) + ")";
 		})
 		.attr("d", d3.svg.chord().radius(inner))
 		.style("opacity", 1);
@@ -200,6 +199,69 @@ function componentToHex(color){
 	return hex.length == 1 ? "0" + hex : hex;
 }
 
+function angleToPoints(angle) {
+	var segment = Math.floor(angle / Math.PI * 2) + 2;
+	var diagonal =  (1/2 * segment + 1/4) * Math.PI;
+	var op = Math.cos(Math.abs(diagonal - angle)) * Math.sqrt(2);
+	var x = op * Math.cos(angle);
+	var y = op * Math.sin(angle);
+
+	return {
+		x1: x < 0 ? 1 : 0,
+		y1: y < 0 ? 1 : 0,
+		x2: x >= 0 ? x : x + 1,
+		y2: y >= 0 ? y : y + 1
+	};
+}
+
+function createGradientForConnection(d){
+	cSource = fill(d.source.index);
+	cTarget = fill(d.target.index);
+
+	var id = d.source.index + "_" + d.target.index
+	var aSource = d.source.endAngle;
+	var aTarget = d.target.startAngle;
+
+	var aPath = aSource + Math.abs(aTarget - aSource)/2;
+
+	var points = angleToPoints(aPath);
+
+	var gradient = svg.append("svg:defs")
+	    .append("svg:linearGradient")
+	    .attr("id", id )
+	    .attr("x1", points.x1)
+	    .attr("y1", points.y1)
+	    .attr("x2", points.x2)
+	    .attr("y2", points.y2)
+	    .attr("spreadMethod", "pad");
+	
+	gradient.append("svg:stop")
+	    .attr("offset", "0%")
+	    .attr("stop-color", cTarget)
+	    .attr("stop-opacity", 1);
+
+	gradient.append("svg:stop")
+	    .attr("offset", "48%")
+	    .attr("stop-color", cTarget)
+	    .attr("stop-opacity", 0.8);
+	
+	gradient.append("svg:stop")
+	    .attr("offset", "52%")
+	    .attr("stop-color", cSource)
+	    .attr("stop-opacity", 0.8);
+
+	gradient.append("svg:stop")
+	    .attr("offset", "100%")
+	    .attr("stop-color", cSource)
+	    .attr("stop-opacity", 1);
+
+	return id;
+}
+
+function radToDeg(angle){
+	return (angle / Math.PI) * 180;
+}
+
 /**
  * Randomize array element order in-place.
  * Using Fisher-Yates shuffle algorithm.
@@ -219,9 +281,13 @@ function trigger() {
 	var edgeFilter = d3.select("#edge-filter").property("value");
 	var subNumFilter = d3.select("#subnumber-filter").property("value");
 	var subNameFilter = d3.select("#subname-filter").property("value");
+
+	if(!edgeFilter && !subNameFilter && !subNumFilter){
+		subNumFilter = 10;
+		d3.select("#subnumber-filter").property("value", "10");
+	}
 	
 	filter(edgeFilter, subNameFilter, subNumFilter);
-
 }
 
 function filter(edgeFilter, subNameFilter, subNumFilter) {
