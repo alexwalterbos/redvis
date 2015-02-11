@@ -201,6 +201,43 @@ function componentToHex(color){
 }
 
 function angleToPoints(angle) {
+	/*
+	var pointOfAngle = function(a) {
+            return {
+                x:Math.cos(a),
+                y:Math.sin(a)
+            };
+        }
+
+        var degreesToRadians = function(d) {
+            return ((d * Math.PI) / 180);
+        }
+
+        var eps = Math.pow(2, -52);
+        angle = (angle % (2 * Math.PI));
+        var startPoint = pointOfAngle(Math.PI - angle);
+        var endPoint = pointOfAngle((Math.PI * 2) - angle);
+
+        if(startPoint.x <= 0 || Math.abs(startPoint.x) <= eps)
+            startPoint.x = 0;
+
+        if(startPoint.y <= 0 || Math.abs(startPoint.y) <= eps)
+            startPoint.y = 0;
+
+        if(endPoint.x <= 0 || Math.abs(endPoint.x) <= eps)
+            endPoint.x = 0;
+
+        if(endPoint.y <= 0 || Math.abs(endPoint.y) <= eps)
+            endPoint.y = 0;
+
+	return {
+		x1: startPoint.x,
+		y1: startPoint.y,
+		x2: endPoint.x,
+		y2: endPoint.y
+	};
+
+	*/
 	var segment = Math.floor(angle / Math.PI * 2) + 2;
 	var diagonal =  (1/2 * segment + 1/4) * Math.PI;
 	var op = Math.cos(Math.abs(diagonal - angle)) * Math.sqrt(2);
@@ -220,20 +257,10 @@ function getGradientId(d){
 	cTarget = fill(d.target.index);
 
 	var id = d.source.index + "_" + d.target.index
-	var aSource = d.source.startAngle + ((d.source.endAngle - d.source.startAngle) / 2);
-	var aTarget = d.target.startAngle + ((d.target.endAngle - d.source.startAngle) / 2);
+	var aSource = d.source.endAngle;
+	var aTarget = d.target.startAngle;
 
-	var aPath;
-
-	if (aSource > aTarget) {
-		aPath = aTarget + ((aSource - aTarget) / 2);
-		if ((aSource - aTarget) > (Math.PI / 2)) {
-			aPath = aPath - (Math.PI / 2);
-		}
-	}
-	else {
-		aPath = aSource + ((aTarget - aSource) / 2);
-	}
+	var aPath = aSource + Math.abs(aTarget - aSource)/2;
 
 	var points = angleToPoints(aPath);
 
@@ -250,13 +277,27 @@ function getGradientId(d){
 	    .attr("offset", "0%")
 	    .attr("stop-color", cTarget)
 	    .attr("stop-opacity", 1);
+
+	gradient.append("svg:stop")
+	    .attr("offset", "48%")
+	    .attr("stop-color", cTarget)
+	    .attr("stop-opacity", 0.8);
 	
+	gradient.append("svg:stop")
+	    .attr("offset", "52%")
+	    .attr("stop-color", cSource)
+	    .attr("stop-opacity", 0.8);
+
 	gradient.append("svg:stop")
 	    .attr("offset", "100%")
 	    .attr("stop-color", cSource)
 	    .attr("stop-opacity", 1);
 
 	return id;
+}
+
+function radToDeg(angle){
+	return (angle / Math.PI) * 180;
 }
 
 /**
