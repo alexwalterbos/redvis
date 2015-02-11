@@ -14,6 +14,8 @@ function loadGroups() {
 				.property('value', function(d) {
 					return d;
 				});
+
+			trigger();
 		}
 	};
 
@@ -35,6 +37,7 @@ function showLoad() {
 
 function start(json){
 	hideLoad();
+
 	// Generate colors
 	colorRange = [];
 	for(i = 0; i < json.matrix.length; i++){
@@ -62,13 +65,13 @@ function start(json){
 	chord = d3.layout.chord()
 		.padding(.03)
 		.sortGroups(d3.descending)
-		.sortSubgroups(sortSubgroups)
+		.sortSubgroups(d3.ascending)
 		.matrix(json.matrix);
 
 	//Draw everything
 	addGroups();
 	addTicks(json.groups);
-	stylePaths();
+	appendConnections();
 }
 
 function addGroups() {
@@ -81,10 +84,6 @@ function addGroups() {
 		.attr("d", d3.svg.arc().innerRadius(inner).outerRadius(outer))
 		.on("mouseover", fade(.1))
 		.on("mouseout", fade(1));
-}
-
-function sortSubgroups(a, b){
-	return d3.ascending(a,b);
 }
 
 function addTicks(groups) {
@@ -124,14 +123,14 @@ function addTicks(groups) {
 		});
 }
 
-function stylePaths() {
+function appendConnections() {
 	svg.append("svg:g")
 		.attr("class", "chord")
 		.selectAll("path")
 		.data(chord.chords)
 		.enter().append("svg:path")
 		.style("fill", function(d) { 
-			return "url(#" + getGradientId(d) + ")";
+			return "url(#" + createGradientForConnection(d) + ")";
 		})
 		.attr("d", d3.svg.chord().radius(inner))
 		.style("opacity", 1);
@@ -201,43 +200,6 @@ function componentToHex(color){
 }
 
 function angleToPoints(angle) {
-	/*
-	var pointOfAngle = function(a) {
-            return {
-                x:Math.cos(a),
-                y:Math.sin(a)
-            };
-        }
-
-        var degreesToRadians = function(d) {
-            return ((d * Math.PI) / 180);
-        }
-
-        var eps = Math.pow(2, -52);
-        angle = (angle % (2 * Math.PI));
-        var startPoint = pointOfAngle(Math.PI - angle);
-        var endPoint = pointOfAngle((Math.PI * 2) - angle);
-
-        if(startPoint.x <= 0 || Math.abs(startPoint.x) <= eps)
-            startPoint.x = 0;
-
-        if(startPoint.y <= 0 || Math.abs(startPoint.y) <= eps)
-            startPoint.y = 0;
-
-        if(endPoint.x <= 0 || Math.abs(endPoint.x) <= eps)
-            endPoint.x = 0;
-
-        if(endPoint.y <= 0 || Math.abs(endPoint.y) <= eps)
-            endPoint.y = 0;
-
-	return {
-		x1: startPoint.x,
-		y1: startPoint.y,
-		x2: endPoint.x,
-		y2: endPoint.y
-	};
-
-	*/
 	var segment = Math.floor(angle / Math.PI * 2) + 2;
 	var diagonal =  (1/2 * segment + 1/4) * Math.PI;
 	var op = Math.cos(Math.abs(diagonal - angle)) * Math.sqrt(2);
@@ -252,7 +214,7 @@ function angleToPoints(angle) {
 	};
 }
 
-function getGradientId(d){
+function createGradientForConnection(d){
 	cSource = fill(d.source.index);
 	cTarget = fill(d.target.index);
 
@@ -319,9 +281,13 @@ function trigger() {
 	var edgeFilter = d3.select("#edge-filter").property("value");
 	var subNumFilter = d3.select("#subnumber-filter").property("value");
 	var subNameFilter = d3.select("#subname-filter").property("value");
+
+	if(!edgeFilter && !subNameFilter && !subNumFilter){
+		subNumFilter = 10;
+		d3.select("#subnumber-filter").property("value", "10");
+	}
 	
 	filter(edgeFilter, subNameFilter, subNumFilter);
-
 }
 
 function filter(edgeFilter, subNameFilter, subNumFilter) {
