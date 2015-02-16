@@ -12,8 +12,8 @@ PORT_NUMBER = 8000
 #the browser 
 class RedVisHandler(BaseHTTPRequestHandler):
 
-	def __init__(self, crawl_results, groups, *args):
-		self.crawl_results = crawl_results
+	def __init__(self, edges, groups, *args):
+		self.edges = edges
 		self.groups = groups
 		BaseHTTPRequestHandler.__init__(self, *args)
 
@@ -95,7 +95,7 @@ class RedVisHandler(BaseHTTPRequestHandler):
 				else:
 					sub_name = "askreddit"
 
-				graph = transformer.construct_graph(self.crawl_results, edge_value, sub_max, False, sub_name)
+				graph = transformer.construct_graph(self.edges, edge_value, sub_max, True, sub_name)
 	
 				self.send_response(200)
 				self.send_header('Content-Type', 'application/json')
@@ -119,8 +119,9 @@ try:
 	#incoming request
 	print 'reading crawling results'
 	crawl_results = transformer.read_results('results.json')
+	edges = transformer.build_edges(crawl_results)
 	groups = transformer.get_subreddits(crawl_results)
-	handler = handleRequestWithResults(crawl_results, groups)
+	handler = handleRequestWithResults(edges, groups)
 	server = HTTPServer(('', PORT_NUMBER), handler)
 	print 'Started httpserver on port ' , PORT_NUMBER
 	
