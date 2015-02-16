@@ -95,7 +95,7 @@ class RedVisHandler(BaseHTTPRequestHandler):
 				else:
 					sub_name = "askreddit"
 
-				graph = transformer.construct_graph(self.edges, edge_value, sub_max, True, sub_name)
+				graph = transformer.construct_graph(self.edges, edge_value, sub_max, False, sub_name)
 	
 				self.send_response(200)
 				self.send_header('Content-Type', 'application/json')
