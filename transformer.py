@@ -2,6 +2,7 @@
 import json
 import os.path
 import argparse
+import copy
 from functools import partial
 
 def read_results(file_name):
@@ -101,8 +102,7 @@ def build_matrix(node_list, edge_list):
 		edge_matrix[edge['to']][edge['from']] = edge['toCount']
 
 	return edge_matrix
-
-def construct_graph(crawl_results, filter_min, max_subs, normalize, sub):
+def build_edges(crawl_results):
 	edge_dict = {}
 
 	for user_key in crawl_results:
@@ -119,7 +119,10 @@ def construct_graph(crawl_results, filter_min, max_subs, normalize, sub):
 
 	edge_list = edge_dict.values()
 	edge_list.sort(key = lambda l: l['fromCount'])
+	return edge_list
 
+def construct_graph(edges, filter_min, max_subs, normalize, sub):
+	edge_list = copy.deepcopy(edges)
 	if filter_min > 1:
 		print 'filtering results below ' + str(filter_min)
 		edge_list = [edge for edge in edge_list if edge['fromCount'] >= filter_min]
