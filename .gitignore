@@ -55,3 +55,4 @@ target/
 
 # We expect big .json files
 *.json
+*.json.old

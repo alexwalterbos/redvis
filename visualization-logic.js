@@ -200,18 +200,25 @@ function componentToHex(color){
 }
 
 function angleToPoints(angle) {
-	var segment = Math.floor(angle / Math.PI * 2) + 2;
-	var diagonal =  (1/2 * segment + 1/4) * Math.PI;
-	var op = Math.cos(Math.abs(diagonal - angle)) * Math.sqrt(2);
-	var x = op * Math.cos(angle);
-	var y = op * Math.sin(angle);
+	var cos = Math.cos(angle);
+	var sin = Math.sin(angle);
 
-	return {
-		x1: x < 0 ? 1 : 0,
-		y1: y < 0 ? 1 : 0,
-		x2: x >= 0 ? x : x + 1,
-		y2: y >= 0 ? y : y + 1
-	};
+	if (Math.abs(cos) > Math.abs(sin)){
+		return {
+			x1: cos > 0 ? 100 : 0,
+			y1: (sin * (1 / Math.abs(cos)) + 1) * 50,
+			x2: cos > 0 ? 0 : 100,	
+			y2: 100 - ((sin * (1 / Math.abs(cos)) + 1) * 50)
+		};
+	}
+	else {
+		return {
+			x1: ((cos * (1 / Math.abs(sin)) + 1) * 50),
+			y1: sin > 0 ? 100 : 0,
+			x2: 100 - ((cos * (1 / Math.abs(sin)) + 1) * 50),
+			y2: sin > 0 ? 0 : 100
+		};
+	}
 }
 
 function createGradientForConnection(d){
@@ -222,17 +229,34 @@ function createGradientForConnection(d){
 	var aSource = d.source.endAngle;
 	var aTarget = d.target.startAngle;
 
-	var aPath = aSource + Math.abs(aTarget - aSource)/2;
+	var aPath;
+	if(aSource > aTarget) {
+		aPath = aTarget + Math.abs(aSource - aTarget)/2;
+		if(d.source.index < d.target.index){
+			var c = cSource;
+			cSource = cTarget;
+			cTarget = c;
+		}
+	}
+	else {
+		aPath = aSource + Math.abs(aTarget - aSource)/2;
+		if(d.source.index > d.target.index){
+			var c = cSource;
+			cSource = cTarget;
+			cTarget = c;
+		}
+	}
 
 	var points = angleToPoints(aPath);
 
 	var gradient = svg.append("svg:defs")
 	    .append("svg:linearGradient")
 	    .attr("id", id )
-	    .attr("x1", points.x1)
-	    .attr("y1", points.y1)
-	    .attr("x2", points.x2)
-	    .attr("y2", points.y2)
+	    .attr("data", { "id": id })
+	    .attr("x1", points.x1 + "%")
+	    .attr("y1", points.y1 + "%")
+	    .attr("x2", points.x2 + "%")
+	    .attr("y2", points.y2 + "%")
 	    .attr("spreadMethod", "pad");
 	
 	gradient.append("svg:stop")
